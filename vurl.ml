@@ -1,7 +1,4 @@
-type t = uri
-
-val cons : t -> uri -> t
-val head : t -> uri
+type t = Uri.t
 
 val make : string -> t (* toplevel uri *)
 
@@ -18,8 +15,9 @@ type rr =
   | Ptr
 
 val recurse : uri -> Res.t -> t
-val iterate : uri -> Res.t -> uri
-val backtrack : uri -> uri option
+val iterate : uri -> Res.t -> t
+
+// val backtrack : uri -> Res.t -> uri option
 
 val to_string : t -> string
 
