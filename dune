@@ -1,0 +1,2 @@
+(mdx
+ (libraries vurl eio eio_main eio.unix vurl_eio))
