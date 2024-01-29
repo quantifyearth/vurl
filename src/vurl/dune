@@ -1,0 +1,4 @@
+(library
+ (name vurl)
+ (public_name vurl)
+ (libraries uri))

@@ -1,0 +1,3 @@
+(executable
+ (name srtm)
+ (libraries eio_main vurl-eio mirage-crypto-rng-eio progress tiff))
