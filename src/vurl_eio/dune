@@ -1,4 +1,11 @@
 (library
  (name vurl_eio)
  (public_name vurl-eio)
- (libraries eio vurl progress cohttp-eio tls-eio zipc))
+ (libraries
+  eio
+  vurl
+  progress
+  cohttp-eio
+  tls-eio
+  capnp-rpc-lwt
+  capnp-rpc-unix))

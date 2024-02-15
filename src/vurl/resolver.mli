@@ -1,19 +1,17 @@
-type 'target t = ..
-(** A resolver that will resolve URIs to targets *)
+type 'a request = { vurl : Vurl_intf.t; resource : 'a Resource.t }
+and 'a response = Vurl_intf.t * 'a Resource.t
+and 'a handler = 'a request -> 'a response
+and 'a middleware = 'a handler -> 'a handler
 
-type equality = { equal : 'a 'b. 'a t -> 'b t -> ('a t, 'b t) Type.eq option }
-(** A higher-ranked polymorphic, type equality record. See {! register} for how
-    to contruct one for your resolver. *)
+val logger : _ middleware
+(** A simple logger that logs all incoming requests to the resolver *)
 
-val register :
-  'a t ->
-  resolve:(Uri.t -> 'a) ->
-  equal:equality ->
-  pp:(Format.formatter -> 'a -> unit) ->
-  unit
-(** [register r ~resolve ~equal ~pp] registers a new resolver for [r] that uses
-    [resolve] to resolve a URI.*)
+val not_found : Resource.Error.t handler
+(** The [not_found] handler, typically used to close off a collection of
+    handlers and middleware. *)
 
-val resolve : 'target t -> Uri.t -> 'target
-(** [resolve resolver uri] resolves a [uri] to a target which is resolver
-    specifc. *)
+module Handlers : sig
+  type t = [] : t | ( :: ) : ('a Resource.t * 'a handler) * t -> t
+
+  val handlers : t -> _ middleware
+end

@@ -1,5 +1,4 @@
+module Resource = Resource
 module Resolver = Resolver
-
-type t = Uri.t
-
-let v uri = Uri.of_string uri
+module Rpc = Rpc
+include Vurl_intf

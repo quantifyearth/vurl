@@ -1,4 +1,12 @@
 (library
  (name vurl)
  (public_name vurl)
- (libraries uri))
+ (flags
+  (:standard -w -53-55))
+ (libraries uri logs cid capnp capnp-rpc-lwt))
+
+(rule
+ (targets schema.ml schema.mli)
+ (deps schema.capnp)
+ (action
+  (run capnp compile -o %{bin:capnpc-ocaml} %{deps})))

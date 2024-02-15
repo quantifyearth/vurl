@@ -1,33 +1,26 @@
 open Eio
+open Vurl_eio
 
 let srtm =
-  Vurl.v
+  Vurl.of_uri
     "https://srtm.csi.cgiar.org/wp-content/uploads/files/srtm_5x5/TIFF/srtm_19_03.zip"
 
-let resolve net directory vurl =
-  let progress = function
-    | None -> Progress.Line.noop ()
-    | Some (name, total) ->
-        let open Progress.Line in
-        list [ const name; spinner (); bar total; percentage_of total ]
-  in
-  let name uri =
-    Uri.path uri |> String.split_on_char '/' |> List.rev |> List.hd
-  in
-  let resolver = Vurl_eio.file_resolver ~name ~progress net directory in
-  let file = Vurl.Resolver.resolve resolver vurl in
-  let dir = Vurl_eio.File.directory file in
+let resolve fs vurl =
+  let file = Vurl.file vurl in
+  let dir = Vurl_eio.of_file fs file |> File.directory in
   Eio.Path.read_dir dir
 
-let () =
+(* Could be abstracted into a library *)
+let vurl_run fn =
   Eio_main.run @@ fun env ->
-  Mirage_crypto_rng_eio.run (module Mirage_crypto_rng.Fortuna) env @@ fun () ->
-  let net = Stdenv.net env in
+  Switch.run @@ fun sw ->
+  let uri = Path.(load (env#fs / "example.cap")) |> Uri.of_string in
+  let cap = Vurl_eio.connect_exn ~sw (Stdenv.net env) uri in
+  Vurl.add_resolver cap;
+  fn env
+
+let () =
+  vurl_run @@ fun env ->
   let fs = Stdenv.fs env in
-  let temp_dir =
-    match Sys.argv.(1) with
-    | dir -> Eio.Path.(fs / dir)
-    | exception Invalid_argument _ -> Eio.Path.(fs / Filename.temp_dir "" "")
-  in
-  let files = resolve net temp_dir srtm in
-  Fmt.pr "Downloaded %a to %a" Fmt.(list string) files Path.pp temp_dir
+  let files = resolve fs srtm in
+  Fmt.pr "Downloaded %a" Fmt.(list string) files
