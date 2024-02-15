@@ -19,19 +19,19 @@ val file_resolver :
   ?progress:((string * int) option -> int Progress.Line.t) ->
   _ Eio.Net.t ->
   _ Eio.Path.t ->
-  Vurl.Resource.File.t Vurl.Resolver.handler
+  Vurl.Resolver.handler
 (** A new file resolver for a particular directory. [name] is used to convert a
     URI to a file name and [progress] can be used to optionally report progress
     made by the download. *)
 
-val git_resolver : _ Eio.Path.t -> Vurl.Resource.Git.t Vurl.Resolver.handler
+val git_resolver : _ Eio.Path.t -> Vurl.Resolver.handler
 
 val run :
   secret_key:[< `Ephemeral | `File of string | `PEM of string ] ->
   sw:Eio.Switch.t ->
   listen_address:Capnp_rpc_unix.Network.Location.t ->
   net:_ Eio.Net.t ->
-  _ Vurl.Resolver.handler ->
+  Vurl.Resolver.handler ->
   Uri.t
 (** Run a resolver service *)
 

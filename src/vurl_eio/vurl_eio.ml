@@ -70,10 +70,32 @@ let name uri =
   let params = Uri.path_and_query uri in
   String.split_on_char '/' params |> String.concat "-"
 
-let cid_of_file path = Path.load path |> Cid.of_string |> Result.get_ok
+let load (t, path) =
+  let open Path in
+  with_open_in (t, path) @@ fun flow ->
+  try
+    let size = Eio.File.size flow in
+    if Optint.Int63.(compare size (of_int Sys.max_string_length)) = 1 then
+      raise @@ Fs.err File_too_large;
+    let buf = Cstruct.create (Optint.Int63.to_int size) in
+    let rec loop buf got =
+      match Flow.single_read flow buf with
+      | n -> loop (Cstruct.shift buf n) (n + got)
+      | exception End_of_file -> got
+    in
+    let got = loop buf 0 in
+    Cstruct.sub buf 0 got
+  with Exn.Io _ as ex ->
+    let bt = Printexc.get_raw_backtrace () in
+    Exn.reraise_with_context ex bt "loading %a" pp (t, path)
+
+let cid_of_file path =
+  let buf = load path in
+  let hash = Multihash_digestif.of_cstruct `Sha2_256 buf |> Result.get_ok in
+  Cid.v ~version:`Cidv1 ~base:`Base32 ~codec:`Plaintextv2 ~hash
 
 let file_resolver ?(name = name) ?progress (net : _ Net.t) (dir : _ Path.t) :
-    Vurl.Resource.File.t Vurl.Resolver.handler =
+    Vurl.Resolver.handler =
  fun req ->
   let http =
     Cohttp_eio.Client.make ~https:(Some (https ~authenticator:null_auth)) net
@@ -104,22 +126,10 @@ let resolve_impl handler =
          let resource = Params.resource_get params in
          release_param_caps ();
          let req = Vurl.Resolver.{ vurl; resource } in
-         match resource with
-         | Vurl.Rpc.Resource_16038180360818139020.File ->
-             let v, _ = handler Vurl.Resolver.{ vurl; resource = File } in
-             let response, results =
-               Service.Response.create Results.init_pointer
-             in
-             Results.vurl_set results (Vurl.to_string v);
-             Service.return response
-         | Git ->
-             let v, _ = handler Vurl.Resolver.{ vurl; resource = Git } in
-             let response, results =
-               Service.Response.create Results.init_pointer
-             in
-             Results.vurl_set results (Vurl.to_string v);
-             Service.return response
-         | _ -> failwith "TODO"
+         let v, _ = handler req in
+         let response, results = Service.Response.create Results.init_pointer in
+         Results.vurl_set results (Vurl.to_string v);
+         Service.return response
      end
 
 let run ~secret_key ~sw ~listen_address ~net handler =

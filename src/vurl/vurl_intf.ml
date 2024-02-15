@@ -23,7 +23,12 @@ let of_string_exn s =
             match String.split_on_char '!' r with
             | [ u; c ] ->
                 let uri = Uri.of_string u in
-                let cid = Cid.of_string c |> Result.get_ok in
+                let cid =
+                  Cid.of_string c |> function
+                  | Ok v -> v
+                  | Error (`Msg m) -> failwith m
+                  | Error (`Unsupported _) -> failwith "CID Unsupported"
+                in
                 loop_rest ({ uri; cid } :: acc) rs
             | [ "" ] -> acc
             | s -> failwith ("Not a valid Vurl: " ^ String.concat "!" s))
@@ -64,7 +69,8 @@ let file vurl =
     |> Results.vurl_get |> of_string_exn
   in
   let file_vurl = fold_resolver fn in
-  Resource.File.{ path = to_string file_vurl }
+  let file_path = (List.hd file_vurl.segments).uri |> Uri.path in
+  Resource.File.{ path = file_path }
 
 let ptr _ = failwith "TODO"
 let git _ = failwith "TODO"

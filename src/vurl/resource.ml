@@ -15,19 +15,10 @@ module Error = struct
   type t = { description : string }
 end
 
-type _ t =
-  | File : File.t t
-  | Git : Git.t t
-  | Ptr : Ptr.t t
-  | Unit : unit t
-  | Error : Error.t t
-
-let equal (type a b) : a t -> b t -> (a, b) Type.eq option =
- fun a b ->
-  match (a, b) with
-  | File, File -> Some Type.Equal
-  | Git, Git -> Some Type.Equal
-  | Ptr, Ptr -> Some Type.Equal
-  | Unit, Unit -> Some Type.Equal
-  | Error, Error -> Some Type.Equal
-  | _ -> None
+type t = Rpc.Resource_16038180360818139020.t =
+  | File
+  | Git
+  | Ptr
+  | Unit
+  | Error
+  | Undefined of int

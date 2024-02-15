@@ -15,11 +15,10 @@ module Error : sig
   type t = { description : string }
 end
 
-type _ t =
-  | File : File.t t
-  | Git : Git.t t
-  | Ptr : Ptr.t t
-  | Unit : unit t
-  | Error : Error.t t
-
-val equal : 'a t -> 'b t -> ('a, 'b) Type.eq option
+type t = Rpc.Resource_16038180360818139020.t =
+  | File
+  | Git
+  | Ptr
+  | Unit
+  | Error
+  | Undefined of int
