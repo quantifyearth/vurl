@@ -35,6 +35,6 @@ module Resolver = Resolver
 module Rpc = Rpc
 
 val add_resolver : Rpc.t -> unit
-val file : t -> Resource.File.t
-val ptr : t -> Resource.Ptr.t
-val git : t -> Resource.Git.t
+val file : t -> t * Resource.File.t
+val ptr : t -> t * Resource.Ptr.t
+val git : t -> t * Resource.Git.t

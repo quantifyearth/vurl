@@ -5,15 +5,19 @@ and segment = { uri : Uri.t; cid : Cid.t }
 
 let to_string t =
   let i = Uri.to_string t.intentional_uri in
-  i ^ ";"
-  ^ List.fold_left
-      (fun acc seg ->
-        let u = Uri.to_string seg.uri in
-        let c = Cid.to_string seg.cid in
-        acc ^ ";" ^ u ^ "!" ^ c)
-      "" t.segments
+  match t.segments with
+  | [] -> i
+  | segments ->
+      i
+      ^ List.fold_left
+          (fun acc seg ->
+            let u = Uri.to_string seg.uri in
+            let c = Cid.to_string seg.cid in
+            acc ^ ";" ^ u ^ "!" ^ c)
+          "" segments
 
 let of_string_exn s =
+  Logs.info (fun f -> f "Got %s" s);
   match String.split_on_char ';' s with
   | [] -> failwith "Not a valid VURL"
   | iuri :: rest ->
@@ -69,8 +73,9 @@ let file vurl =
     |> Results.vurl_get |> of_string_exn
   in
   let file_vurl = fold_resolver fn in
+  Logs.debug (fun f -> f "Vurl recv: %a" pp file_vurl);
   let file_path = (List.hd file_vurl.segments).uri |> Uri.path in
-  Resource.File.{ path = file_path }
+  (file_vurl, Resource.File.{ path = file_path })
 
 let ptr _ = failwith "TODO"
 let git _ = failwith "TODO"

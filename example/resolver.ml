@@ -10,7 +10,8 @@ let () =
 
 let () =
   Eio_main.run @@ fun env ->
-  let fs = Stdenv.cwd env in
+  let fs = Path.(Stdenv.cwd env / "data") in
+  Path.mkdir ~perm:0o777 fs;
   let net = Stdenv.net env in
   let uri =
     Eio.Switch.run @@ fun sw ->

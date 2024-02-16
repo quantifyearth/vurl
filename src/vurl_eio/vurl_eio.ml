@@ -50,7 +50,7 @@ end
 
 let of_file (fs : _ Path.t) (vurl : Vurl.Resource.File.t) =
   let path = Path.(fs / vurl.path) in
-  let parent = Path.(path / "..") in
+  let parent = Path.native_exn path |> Filename.dirname |> Path.( / ) fs in
   File.{ directory = (parent :> Fs.dir_ty Path.t); name = (fun _ -> "default") }
 
 let null_auth ?ip:_ ~host:_ _ =
@@ -127,6 +127,7 @@ let resolve_impl handler =
          release_param_caps ();
          let req = Vurl.Resolver.{ vurl; resource } in
          let v, _ = handler req in
+         Logs.info (fun f -> f "Sending vurl: %a" Vurl.pp v);
          let response, results = Service.Response.create Results.init_pointer in
          Results.vurl_set results (Vurl.to_string v);
          Service.return response
