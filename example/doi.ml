@@ -5,9 +5,8 @@ let () =
   Logs.set_level (Some Logs.Info);
   Logs.set_reporter (Logs_fmt.reporter ())
 
-let srtm =
-  Vurl.of_uri
-    "https://srtm.csi.cgiar.org/wp-content/uploads/files/srtm_5x5/TIFF/srtm_19_03.zip"
+let where_on_earth_is_the_spatial_name_system =
+  Vurl.of_uri "https://doi.org/10.1145/3626111.3628210"
 
 let resolve fs vurl =
   let vurl, file = Vurl.file vurl in
@@ -25,5 +24,5 @@ let () =
   Eio_main.run @@ fun env ->
   let fs = Stdenv.fs env in
   Vurl_eio.with_cap ~net:(Stdenv.net env) Path.(fs / "example.cap") @@ fun () ->
-  let files = resolve fs srtm in
+  let files = resolve fs where_on_earth_is_the_spatial_name_system in
   Logs.info (fun f -> f "Downloaded %a" Fmt.(list string) files)

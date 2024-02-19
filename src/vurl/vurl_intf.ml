@@ -14,7 +14,7 @@ let to_string t =
             let u = Uri.to_string seg.uri in
             let c = Cid.to_string seg.cid in
             acc ^ ";" ^ u ^ "!" ^ c)
-          "" segments
+          "" (List.rev segments)
 
 let of_string_exn s =
   Logs.info (fun f -> f "Got %s" s);
@@ -38,16 +38,18 @@ let of_string_exn s =
             | s -> failwith ("Not a valid Vurl: " ^ String.concat "!" s))
       in
       let intentional_uri = Uri.of_string iuri in
-      let segments = loop_rest [] rest in
+      let segments = loop_rest [] rest |> List.rev in
       { intentional_uri; segments }
 
 let intentional_uri t = Some t.intentional_uri
-let cid t = List.rev t.segments |> List.hd |> fun v -> v.cid
 
 let decapsulate t =
   match t.segments with
-  | [] -> None
-  | s :: segments -> Some (s, { t with segments })
+  | [] -> `URI t.intentional_uri
+  | s :: segments -> `Segment (s, { t with segments })
+
+let next_uri t =
+  match decapsulate t with `Segment (s, _) -> s.uri | `URI uri -> uri
 
 let encapsulate t cid uri = { t with segments = { cid; uri } :: t.segments }
 let pp ppf f = Format.fprintf ppf "%s" (to_string f)
@@ -79,3 +81,7 @@ let file vurl =
 
 let ptr _ = failwith "TODO"
 let git _ = failwith "TODO"
+
+let cid ?(codec = `Https) buf =
+  let hash = Multihash_digestif.of_cstruct `Sha2_256 buf |> Result.get_ok in
+  Cid.v ~version:`Cidv1 ~base:`Base32 ~codec ~hash

@@ -14,6 +14,9 @@ val of_file : _ Path.t -> Vurl.Resource.File.t -> File.t
 
 (** {1 Resolver Services} *)
 
+val doi : _ Eio.Net.t -> Vurl.Resolver.middleware
+(** Handles intermediate DOI resolution *)
+
 val file_resolver :
   ?name:(Uri.t -> string) ->
   ?progress:((string * int) option -> int Progress.Line.t) ->
@@ -38,3 +41,6 @@ val run :
 val connect_exn :
   sw:Switch.t -> _ Net.t -> Uri.t -> 'a Capnp_rpc_lwt.Capability.t
 (** A client-only connection to a capability *)
+
+val with_cap : net:_ Net.t -> _ Path.t -> (unit -> 'a) -> 'a
+(** Simple helper to set up a capability to a resolver from a cap URI in a file.*)

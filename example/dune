@@ -4,6 +4,11 @@
  (libraries eio_main vurl-eio mirage-crypto-rng-eio progress))
 
 (executable
+ (name doi)
+ (modules doi)
+ (libraries eio_main vurl-eio mirage-crypto-rng-eio progress))
+
+(executable
  (name resolver)
  (modules resolver)
  (libraries eio_main vurl-eio mirage-crypto-rng-eio progress))

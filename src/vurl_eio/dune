@@ -8,4 +8,6 @@
   cohttp-eio
   tls-eio
   capnp-rpc-lwt
-  capnp-rpc-unix))
+  capnp-rpc-unix
+  http-cookie
+  yojson))

@@ -1,11 +1,20 @@
 open Eio
 open Capnp_rpc_lwt
+module Json = Yojson.Safe
+
+let ( // ) j s = Json.Util.member s j
 
 module File = struct
   type t = { directory : Fs.dir_ty Path.t; name : Uri.t -> string }
 
   let v directory name = { directory :> Fs.dir_ty Path.t; name }
   let directory t = t.directory
+
+  let with_progress_bar length = function
+    | None -> Progress.with_reporter (Progress.Line.noop ())
+    | Some p ->
+        let progress_bar = p length in
+        Progress.with_reporter progress_bar
 
   let take_all_and_report report t =
     try
@@ -20,17 +29,8 @@ module File = struct
       Buf_read.consume t (Buf_read.buffered_bytes t);
       data
 
-  let with_progress_bar length = function
-    | None -> Progress.with_reporter (Progress.Line.noop ())
-    | Some p ->
-        let progress_bar = p length in
-        Progress.with_reporter progress_bar
-
   let resolve ?progress http t uri =
-    let f = Cohttp_eio.Client.get http uri in
-    Switch.run @@ fun sw ->
-    let response, body = f ~sw in
-    let length = Http.Response.content_length response in
+    Client.get http uri @@ fun parts length _response body ->
     with_progress_bar (Option.map (fun v -> (t.name uri, v)) length) progress
     @@ fun progress ->
     let file = Path.(t.directory / t.name uri) in
@@ -40,12 +40,7 @@ module File = struct
     progress (Buf_read.buffered_bytes buf_r);
     let buf = take_all_and_report progress buf_r in
     Buf_write.string w buf;
-    t
-
-  (* let equal a b =
-     String.equal (Path.native_exn a.directory) (Path.native_exn b.directory) *)
-
-  (* let pp ppf t = Path.pp ppf t.directory *)
+    (parts, t)
 end
 
 let of_file (fs : _ Path.t) (vurl : Vurl.Resource.File.t) =
@@ -68,7 +63,9 @@ let https ~authenticator =
 (* TODO: we can do better *)
 let name uri =
   let params = Uri.path_and_query uri in
-  String.split_on_char '/' params |> String.concat "-"
+  String.split_on_char '/' params
+  |> List.filter (( <> ) "")
+  |> String.concat "-"
 
 let load (t, path) =
   let open Path in
@@ -89,10 +86,42 @@ let load (t, path) =
     let bt = Printexc.get_raw_backtrace () in
     Exn.reraise_with_context ex bt "loading %a" pp (t, path)
 
-let cid_of_file path =
-  let buf = load path in
-  let hash = Multihash_digestif.of_cstruct `Sha2_256 buf |> Result.get_ok in
-  Cid.v ~version:`Cidv1 ~base:`Base32 ~codec:`Plaintextv2 ~hash
+let cid_of_file path = Vurl.cid (load path)
+
+let resolve_doi net doi =
+  let http =
+    Cohttp_eio.Client.make ~https:(Some (https ~authenticator:null_auth)) net
+  in
+  Switch.run @@ fun sw ->
+  let _res, body = Cohttp_eio.Client.get ~sw http doi in
+  let json_raw = Buf_read.take_all (Buf_read.of_flow ~max_size:max_int body) in
+  let json = Json.from_string json_raw in
+  let values = json // "values" |> Json.Util.to_list in
+  let url =
+    List.find
+      (fun f -> match f // "type" with `String "URL" -> true | _ -> false)
+      values
+  in
+  let url = url // "data" // "value" |> Json.Util.to_string in
+  (Uri.of_string url, Vurl.cid (Cstruct.of_string json_raw))
+
+let doi (net : _ Net.t) : Vurl.Resolver.middleware =
+ fun next_handler req ->
+  let uri = Vurl.next_uri req.vurl in
+  match Uri.host uri with
+  | Some "doi.org" ->
+      let doi = Uri.path uri in
+      let uri =
+        Uri.with_uri uri ~host:(Some "doi.org")
+          ~path:(Some ("/api/handles" ^ doi))
+      in
+      let resolved_uri, cid = resolve_doi net uri in
+      let next_vurl = Vurl.encapsulate req.vurl cid resolved_uri in
+      Logs.info (fun f ->
+          f "[DOI] resolved %a to %a" Vurl.pp req.vurl Vurl.pp next_vurl);
+      let next_req = { req with vurl = next_vurl } in
+      next_handler next_req
+  | _ -> next_handler req
 
 let file_resolver ?(name = name) ?progress (net : _ Net.t) (dir : _ Path.t) :
     Vurl.Resolver.handler =
@@ -101,12 +130,17 @@ let file_resolver ?(name = name) ?progress (net : _ Net.t) (dir : _ Path.t) :
     Cohttp_eio.Client.make ~https:(Some (https ~authenticator:null_auth)) net
   in
   let directory = File.v dir name in
-  let uri = req.vurl |> Vurl.intentional_uri |> Option.get in
+  let uri = Vurl.next_uri req.vurl in
   let filename = name uri in
-  let _resolve = File.resolve ?progress http directory uri in
+  let parts, _resolve = File.resolve ?progress http directory uri in
   let cid = cid_of_file Path.(dir / filename) in
   let vurl =
-    Vurl.encapsulate req.vurl cid
+    List.fold_left
+      (fun v (uri, cid) -> Vurl.encapsulate v cid uri)
+      req.vurl parts
+  in
+  let vurl =
+    Vurl.encapsulate vurl cid
       (Uri.make ~scheme:"file" ~path:Path.(native_exn (dir / filename)) ())
   in
   Logs.info (fun f -> f "Vurl: %a" Vurl.pp vurl);
@@ -149,3 +183,10 @@ let connect_exn ~sw net url =
   match Capnp_rpc_unix.Vat.import vat url with
   | Ok sr -> Capnp_rpc_lwt.Sturdy_ref.connect_exn sr
   | Error (`Msg m) -> failwith m
+
+let with_cap ~net cap fn =
+  Switch.run @@ fun sw ->
+  let uri = Path.(load cap) |> Uri.of_string in
+  let cap = connect_exn ~sw net uri in
+  Vurl.add_resolver cap;
+  fn ()

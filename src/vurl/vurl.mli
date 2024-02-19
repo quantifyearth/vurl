@@ -15,20 +15,23 @@ val of_string_exn : string -> t
 val intentional_uri : t -> Uri.t option
 (** The original URI that specified the intent for a Vurl *)
 
-val cid : t -> Cid.t
-(** The lowest CID of the Vurl. *)
-
 type segment = { uri : Uri.t; cid : Cid.t }
 
-val decapsulate : t -> (segment * t) option
+val decapsulate : t -> [ `Segment of segment * t | `URI of Uri.t ]
 (** Removes a layer of the Vurl. If only the intentional URI is left
-    then returns [None]. *)
+    then returns [`URI uri]. *)
+
+val next_uri : t -> Uri.t
+(** The next URI that might need resolved *)
 
 val encapsulate : t -> Cid.t -> Uri.t -> t
 (** Adds another layer of precision to an existing Vurl. *)
 
 val of_uri : string -> t
 (** Makes a new Vurl from an intentional URI. *)
+
+val cid : ?codec:Multicodec.t -> Cstruct.t -> Cid.t
+(** Cid generator for Vurl's *)
 
 module Resource = Resource
 module Resolver = Resolver
