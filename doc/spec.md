@@ -68,7 +68,7 @@ format.
 		},
 		"segments": {
 			"type":"array",
-			"description": "Override of Carbon Density Calculation.",
+			"description": "Resolution results for an intentional URI.",
 			"items": {
 				"type": "object",
                 "properties": {
