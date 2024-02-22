@@ -48,3 +48,46 @@ And we can inspect the vurl to see the resolutions.
 
 In this case we went straight from the intentional URI to a downloaded
 `index.html` file.
+
+## Format
+
+Using the example, a vurl is either a plain URI or if there have been some
+resolution steps, it is a JSON object. The following is a JSON schema for the
+format.
+
+<!-- $MDX file=./schema.json -->
+```json
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"title": "Vurl with segments",
+	"type": "object",
+	"properties": {
+		"intentional_uri": {
+			"type": ["string"],
+			"description": "The original intentional URI."
+		},
+		"segments": {
+			"type":"array",
+			"description": "Override of Carbon Density Calculation.",
+			"items": {
+				"type": "object",
+                "properties": {
+                    "uri": {
+                        "type": ["string"],
+                        "description": "The URI for this resolution step"
+                    },
+                    "cid": {
+                        "type": ["string"],
+                        "description": "The content identifier of the blob of data"
+                    }
+                }
+			},
+			"minItems": 1
+		}
+	},
+	"required": [
+		"intentional_uri",
+		"segments"
+	]
+}
+```

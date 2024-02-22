@@ -1,2 +1,10 @@
 (mdx
  (libraries vurl eio eio_main eio.unix vurl_eio))
+
+(subdir
+ doc
+ (rule
+  (deps %{project_root}/test/schema.json)
+  (targets schema.json)
+  (action
+   (copy %{deps} %{targets}))))

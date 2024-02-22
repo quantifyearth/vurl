@@ -2,7 +2,6 @@
    files and git respositories. *)
 
 open Eio
-open Vurl
 
 let () =
   Logs.set_level (Some Logs.Info);
@@ -21,11 +20,11 @@ let () =
     Eio.Switch.run @@ fun sw ->
     Vurl_eio.run ~sw ~secret_key:(`File "secrets.pem") ~net
       ~listen_address:(`Unix "/tmp/resolver.eio")
-    @@ Resolver.logger @@ Vurl_eio.doi net
-    @@ Vurl.Resolver.routes
+    @@ Vurl_resolver.logger @@ Vurl_eio.doi net
+    @@ Vurl_resolver.routes
          [
-           Vurl.Resolver.file @@ Vurl_eio.file_resolver net fs;
-           Vurl.Resolver.git @@ Vurl_eio.git_resolver fs;
+           Vurl_resolver.file @@ Vurl_eio.file_resolver net fs;
+           Vurl_resolver.git @@ Vurl_eio.git_resolver fs;
          ]
   in
   Eio.traceln "Resolver running: %a" Uri.pp uri
