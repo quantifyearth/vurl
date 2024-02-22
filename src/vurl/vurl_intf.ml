@@ -3,43 +3,64 @@ open Capnp_rpc_lwt
 type t = { intentional_uri : Uri.t; segments : segment list }
 and segment = { uri : Uri.t; cid : Cid.t }
 
+let segment_to_json s =
+  `O
+    [
+      ("uri", `String (Uri.to_string s.uri));
+      ("cid", `String (Cid.to_string s.cid));
+    ]
+
+let to_json t : Ezjsonm.value =
+  `O
+    [
+      ("intentional_uri", `String (Uri.to_string t.intentional_uri));
+      ("segments", `A (List.map segment_to_json t.segments));
+    ]
+
+let cid_of_string_exn s =
+  match Cid.of_string s with
+  | Ok v -> v
+  | Error (`Msg m) -> failwith m
+  | Error (`Unsupported c) ->
+      failwith ("Unsupported multibase in cid " ^ Multibase.Encoding.to_string c)
+
 let to_string t =
-  let i = Uri.to_string t.intentional_uri in
   match t.segments with
-  | [] -> i
-  | segments ->
-      i
-      ^ List.fold_left
-          (fun acc seg ->
-            let u = Uri.to_string seg.uri in
-            let c = Cid.to_string seg.cid in
-            acc ^ ";" ^ u ^ "!" ^ c)
-          "" (List.rev segments)
+  | [] -> Uri.to_string t.intentional_uri
+  | _ -> to_json t |> Ezjsonm.value_to_string
+
+let segment_of_json_exn segment =
+  match
+    (Ezjsonm.find_opt segment [ "uri" ], Ezjsonm.find_opt segment [ "cid" ])
+  with
+  | Some (`String uri), Some (`String cid) ->
+      let uri = Uri.of_string uri in
+      let cid = cid_of_string_exn cid in
+      { uri; cid }
+  | _ -> invalid_arg "Malformed Vurl Segment: issue with URI or CID"
+
+let of_json_exn json =
+  match
+    ( Ezjsonm.find_opt json [ "intentional_uri" ],
+      Ezjsonm.find_opt json [ "segments" ] )
+  with
+  | Some (`String uri), Some (`A segments) ->
+      let segments = List.map segment_of_json_exn segments in
+      let intentional_uri = Uri.of_string uri in
+      { intentional_uri; segments }
+  | _ ->
+      Fmt.invalid_arg
+        "Malformed vurl: expected an intentional URI with zero or more \
+         segments (%s)"
+        (Ezjsonm.value_to_string json)
 
 let of_string_exn s =
-  Logs.info (fun f -> f "Got %s" s);
-  match String.split_on_char ';' s with
-  | [] -> failwith "Not a valid VURL"
-  | iuri :: rest ->
-      let rec loop_rest acc = function
-        | [] -> List.rev acc
-        | r :: rs -> (
-            match String.split_on_char '!' r with
-            | [ u; c ] ->
-                let uri = Uri.of_string u in
-                let cid =
-                  Cid.of_string c |> function
-                  | Ok v -> v
-                  | Error (`Msg m) -> failwith m
-                  | Error (`Unsupported _) -> failwith "CID Unsupported"
-                in
-                loop_rest ({ uri; cid } :: acc) rs
-            | [ "" ] -> acc
-            | s -> failwith ("Not a valid Vurl: " ^ String.concat "!" s))
-      in
-      let intentional_uri = Uri.of_string iuri in
-      let segments = loop_rest [] rest |> List.rev in
-      { intentional_uri; segments }
+  match Ezjsonm.value_from_string_result s with
+  | Ok (`O _ as j) -> of_json_exn j
+  | Ok _ -> invalid_arg "Expected a JSON object for this Vurl"
+  | Error _ ->
+      let intentional_uri = Uri.of_string s in
+      { intentional_uri; segments = [] }
 
 let intentional_uri t = Some t.intentional_uri
 

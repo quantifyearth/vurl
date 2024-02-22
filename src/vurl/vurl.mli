@@ -1,4 +1,4 @@
-type t = Vurl_intf.t
+type t
 (** A versioned URL *)
 
 val pp : Format.formatter -> t -> unit
@@ -34,7 +34,6 @@ val cid : ?codec:Multicodec.t -> Cstruct.t -> Cid.t
 (** Cid generator for Vurl's *)
 
 module Resource = Resource
-module Resolver = Resolver
 module Rpc = Rpc
 
 val add_resolver : Rpc.t -> unit

@@ -1,5 +1,5 @@
-type request = { vurl : Vurl_intf.t; resource : Resource.t }
-and response = Vurl_intf.t * Resource.t
+type request = { vurl : Vurl.t; resource : Vurl.Resource.t }
+and response = Vurl.t * Vurl.Resource.t
 and handler = request -> response
 and middleware = handler -> handler
 

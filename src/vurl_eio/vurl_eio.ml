@@ -105,7 +105,7 @@ let resolve_doi net doi =
   let url = url // "data" // "value" |> Json.Util.to_string in
   (Uri.of_string url, Vurl.cid (Cstruct.of_string json_raw))
 
-let doi (net : _ Net.t) : Vurl.Resolver.middleware =
+let doi (net : _ Net.t) : Vurl_resolver.middleware =
  fun next_handler req ->
   let uri = Vurl.next_uri req.vurl in
   match Uri.host uri with
@@ -124,7 +124,7 @@ let doi (net : _ Net.t) : Vurl.Resolver.middleware =
   | _ -> next_handler req
 
 let file_resolver ?(name = name) ?progress (net : _ Net.t) (dir : _ Path.t) :
-    Vurl.Resolver.handler =
+    Vurl_resolver.handler =
  fun req ->
   let http =
     Cohttp_eio.Client.make ~https:(Some (https ~authenticator:null_auth)) net
@@ -159,7 +159,7 @@ let resolve_impl handler =
          let vurl = Params.vurl_get params |> Vurl.of_string_exn in
          let resource = Params.resource_get params in
          release_param_caps ();
-         let req = Vurl.Resolver.{ vurl; resource } in
+         let req = Vurl_resolver.{ vurl; resource } in
          let v, _ = handler req in
          Logs.info (fun f -> f "Sending vurl: %a" Vurl.pp v);
          let response, results = Service.Response.create Results.init_pointer in
@@ -167,7 +167,7 @@ let resolve_impl handler =
          Service.return response
      end
 
-let run ~secret_key ~sw ~listen_address ~net handler =
+let run ?resolve_uri ~secret_key ~sw ~listen_address ~net handler =
   let config = Capnp_rpc_unix.Vat_config.create ~secret_key listen_address in
   let service_id = Capnp_rpc_unix.Vat_config.derived_id config "main" in
   let uri = Capnp_rpc_unix.Vat_config.sturdy_uri config service_id in
@@ -176,6 +176,7 @@ let run ~secret_key ~sw ~listen_address ~net handler =
   Switch.on_release sw (fun () -> Capability.dec_ref service);
   let restore = Capnp_rpc_net.Restorer.single service_id service in
   let vat = Capnp_rpc_unix.serve ~sw ~net ~restore config in
+  Option.iter (fun r -> Eio.Promise.resolve r uri) resolve_uri;
   Capnp_rpc_unix.Vat.sturdy_uri vat service_id
 
 let connect_exn ~sw net url =
@@ -190,3 +191,41 @@ let with_cap ~net cap fn =
   let cap = connect_exn ~sw net uri in
   Vurl.add_resolver cap;
   fn ()
+
+let mkdir_p fs =
+  try Path.mkdir ~perm:0o777 fs
+  with Eio.Io (Eio.Fs.E (Already_exists _), _) -> ()
+
+let default_resolver ~sw ~net path =
+  let p, r = Eio.Promise.create () in
+  let fs = Path.(path / "_data") in
+  mkdir_p fs;
+  Fiber.fork ~sw (fun () ->
+      let _uri =
+        run ~resolve_uri:r ~sw ~secret_key:`Ephemeral ~net
+          ~listen_address:(`Unix "/tmp/vurl_resolver.default")
+        @@ Vurl_resolver.logger @@ doi net
+        @@ Vurl_resolver.routes
+             [
+               Vurl_resolver.file @@ file_resolver net fs;
+               Vurl_resolver.git @@ git_resolver fs;
+             ]
+      in
+      ());
+  p
+
+exception Finish_resolver
+
+let with_default ~net path fn =
+  let res = ref None in
+  try
+    Switch.run @@ fun sw ->
+    let cap = default_resolver ~sw ~net path in
+    let cap = connect_exn ~sw net (Eio.Promise.await cap) in
+    Logs.info (fun f -> f "Running with connection");
+    Vurl.add_resolver cap;
+    let r = fn () in
+    res := Some r;
+    Switch.fail sw Finish_resolver;
+    r
+  with Finish_resolver -> Option.get !res

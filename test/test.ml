@@ -11,11 +11,15 @@ let vurls () =
   let uri2 = "file:///tmp/my/file.txt" in
   let ov = Vurl.of_string_exn uri in
   let v' = Vurl.intentional_uri ov |> Option.get |> Uri.to_string in
-  Alcotest.(check string) "same uri" uri v';
-  let uri_with_file = "https://example.org;" ^ uri2 ^ "!" ^ cid in
+  Alcotest.(check string) "same uri 1" uri v';
+  let uri_with_file =
+    Fmt.str
+      {| { "intentional_uri": "https://example.org", "segments": [ { "uri": "%s", "cid": "%s"} ] } |}
+      uri2 cid
+  in
   let v = Vurl.of_string_exn uri_with_file in
   let v' = Vurl.intentional_uri v |> Option.get |> Uri.to_string in
-  Alcotest.(check string) "same uri" uri v';
+  Alcotest.(check string) "same uri 2" uri v';
   let f =
     match Vurl.decapsulate v with
     | `Segment s -> s

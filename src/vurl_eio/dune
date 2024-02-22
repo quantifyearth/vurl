@@ -4,6 +4,7 @@
  (libraries
   eio
   vurl
+  vurl.resolver
   progress
   cohttp-eio
   tls-eio
