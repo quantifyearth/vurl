@@ -23,6 +23,7 @@ let resolve fs vurl =
 
 let () =
   Eio_main.run @@ fun env ->
+  Lwt_eio.with_event_loop ~clock:env#clock @@ fun _ ->
   let fs = Stdenv.fs env in
   Vurl_eio.with_cap ~net:(Stdenv.net env) Path.(fs / "example.cap") @@ fun () ->
   let files = resolve fs srtm in

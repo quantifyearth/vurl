@@ -3,7 +3,7 @@ module File : sig
 end
 
 module Git : sig
-  type t
+  type t = { path : string }
 end
 
 module Ptr : sig

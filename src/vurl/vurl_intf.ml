@@ -101,7 +101,21 @@ let file vurl =
   (file_vurl, Resource.File.{ path = file_path })
 
 let ptr _ = failwith "TODO"
-let git _ = failwith "TODO"
+
+let git vurl =
+  let open Rpc.Client.Resolver.Resolve in
+  let vurl = to_string vurl in
+  let request, params = Capability.Request.create Params.init_pointer in
+  Params.vurl_set params vurl;
+  Params.resource_set params Rpc.Resource_16038180360818139020.Git;
+  let fn t =
+    Capability.call_for_value_exn t method_id request
+    |> Results.vurl_get |> of_string_exn
+  in
+  let file_vurl = fold_resolver fn in
+  Logs.debug (fun f -> f "Vurl recv: %a" pp file_vurl);
+  let file_path = (List.hd file_vurl.segments).uri |> Uri.path in
+  (file_vurl, Resource.Git.{ path = file_path })
 
 let cid ?(codec = `Https) buf =
   let hash = Multihash_digestif.of_cstruct `Sha2_256 buf |> Result.get_ok in

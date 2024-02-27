@@ -13,6 +13,7 @@ let mkdir_p fs =
 
 let () =
   Eio_main.run @@ fun env ->
+  Lwt_eio.with_event_loop ~clock:env#clock @@ fun _ ->
   let fs = Path.(Stdenv.cwd env / "data") in
   mkdir_p fs;
   let net = Stdenv.net env in

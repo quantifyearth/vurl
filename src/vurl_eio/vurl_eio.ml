@@ -146,7 +146,46 @@ let file_resolver ?(name = name) ?progress (net : _ Net.t) (dir : _ Path.t) :
   Logs.info (fun f -> f "Vurl: %a" Vurl.pp vurl);
   (vurl, Vurl.Resource.File)
 
-let git_resolver _next_handler _req = failwith "TODO1"
+module G = struct
+  module Store = Git_unix.Store
+  module Sync = Git_unix.Sync (Git_unix.Store)
+end
+
+let git_ok = function
+  | Ok v -> v
+  | Error e -> Fmt.failwith "%a" G.Store.pp_error e
+
+let sync_ok = function
+  | Ok v -> v
+  | Error e -> Fmt.failwith "%a" G.Sync.pp_error e
+
+let git_resolver ?(name = name) (dir : _ Path.t) : Vurl_resolver.handler =
+ fun req ->
+  let uri = Vurl.next_uri req.vurl in
+  let repo = Path.(dir / name uri) in
+  Path.mkdir ~perm:0o777 repo;
+  let path = Path.native_exn repo |> Fpath.v in
+  let store = G.Store.v path |> Lwt_eio.Promise.await_lwt |> git_ok in
+  let ctx =
+    Lwt_eio.Promise.await_lwt @@ Git_unix.ctx (Happy_eyeballs_lwt.create ())
+  in
+  let endpoint = Smart_git.Endpoint.of_string (Uri.to_string uri) |> git_ok in
+  let hash =
+    match
+      G.Sync.fetch ~ctx endpoint store `All
+      |> Lwt_eio.Promise.await_lwt |> sync_ok
+    with
+    | None -> failwith "Git repo already exists/Syncing did nothing: TODO"
+    | Some (hash, _refs) -> hash
+  in
+  (* We aren't using SHA1 so we have to take the hash of the hash *)
+  let cid = Vurl.cid (Cstruct.of_string (Digestif.SHA1.to_raw_string hash)) in
+  let res =
+    Vurl.encapsulate req.vurl cid
+      (Uri.of_string
+         (Fmt.str "file://%s" (Fpath.to_string @@ G.Store.root store)))
+  in
+  (res, Vurl.Resource.Git)
 
 let resolve_impl handler =
   let module X = Vurl.Rpc.Service.Resolver in

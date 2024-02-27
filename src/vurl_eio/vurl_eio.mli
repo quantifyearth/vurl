@@ -27,7 +27,8 @@ val file_resolver :
     URI to a file name and [progress] can be used to optionally report progress
     made by the download. *)
 
-val git_resolver : _ Eio.Path.t -> Vurl_resolver.handler
+val git_resolver :
+  ?name:(Uri.t -> string) -> _ Eio.Path.t -> Vurl_resolver.handler
 
 val run :
   ?resolve_uri:Uri.t Eio.Promise.u ->

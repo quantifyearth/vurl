@@ -3,7 +3,7 @@ module File = struct
 end
 
 module Git = struct
-  type t
+  type t = { path : string }
 end
 
 module Ptr = struct

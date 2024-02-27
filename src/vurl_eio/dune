@@ -11,4 +11,6 @@
   capnp-rpc-lwt
   capnp-rpc-unix
   http-cookie
-  yojson))
+  yojson
+  lwt_eio
+  git-unix))

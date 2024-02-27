@@ -9,6 +9,11 @@
  (libraries eio_main vurl-eio mirage-crypto-rng-eio progress))
 
 (executable
+ (name git)
+ (modules git)
+ (libraries eio_main git vurl-eio mirage-crypto-rng-eio progress))
+
+(executable
  (name example)
  (modules example)
  (libraries eio_main vurl-eio mirage-crypto-rng-eio progress))

@@ -7,6 +7,7 @@ let example_org_html = Vurl.of_uri "https://example.org/index.html"
 let () =
   let vurl, _file =
     Eio_main.run @@ fun env ->
+    Lwt_eio.with_event_loop ~clock:env#clock @@ fun _ ->
     Vurl_eio.with_default ~net:(Eio.Stdenv.net env) (Eio.Stdenv.cwd env)
     @@ fun () -> Vurl.file example_org_html
   in
