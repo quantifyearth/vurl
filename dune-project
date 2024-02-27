@@ -17,5 +17,10 @@
    vurl
    eio
    cohttp-eio
-   (tiff :with-test)
+   git-unix
+   http-cookie
+   tls-eio
+   capnp-rpc-lwt
+   capnp-rpc-unix
+   yojson
    (eio_main :with-test)))
