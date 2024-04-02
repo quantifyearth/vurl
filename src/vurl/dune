@@ -3,7 +3,7 @@
  (public_name vurl)
  (flags
   (:standard -w -53-55))
- (libraries ezjsonm uri logs cid capnp capnp-rpc-lwt))
+ (libraries ezjsonm uri logs cid capnp-rpc-lwt))
 
 (rule
  (targets schema.ml schema.mli)
