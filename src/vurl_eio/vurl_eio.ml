@@ -215,8 +215,9 @@ let run ?resolve_uri ~secret_key ~sw ~listen_address ~net handler =
   Switch.on_release sw (fun () -> Capability.dec_ref service);
   let restore = Capnp_rpc_net.Restorer.single service_id service in
   let vat = Capnp_rpc_unix.serve ~sw ~net ~restore config in
+  let u = Capnp_rpc_unix.Vat.sturdy_uri vat service_id in
   Option.iter (fun r -> Eio.Promise.resolve r uri) resolve_uri;
-  Capnp_rpc_unix.Vat.sturdy_uri vat service_id
+  u
 
 let connect_exn ~sw net url =
   let vat = Capnp_rpc_unix.client_only_vat ~sw net in
@@ -235,6 +236,8 @@ let mkdir_p fs =
   try Path.mkdir ~perm:0o777 fs
   with Eio.Io (Eio.Fs.E (Already_exists _), _) -> ()
 
+let default_resolver_addr = "/tmp/vurl_resolver.default"
+
 let default_resolver ~sw ~net path =
   let p, r = Eio.Promise.create () in
   let fs = Path.(path / "_data") in
@@ -242,7 +245,7 @@ let default_resolver ~sw ~net path =
   Fiber.fork ~sw (fun () ->
       let _uri =
         run ~resolve_uri:r ~sw ~secret_key:`Ephemeral ~net
-          ~listen_address:(`Unix "/tmp/vurl_resolver.default")
+          ~listen_address:(`Unix default_resolver_addr)
         @@ Vurl_resolver.logger @@ doi net
         @@ Vurl_resolver.routes
              [
@@ -267,4 +270,10 @@ let with_default ~net path fn =
     res := Some r;
     Switch.fail sw Finish_resolver;
     r
-  with Finish_resolver -> Option.get !res
+  with
+  | Finish_resolver -> Option.get !res
+  (* TODO: Weird race condition with some unlinking *)
+  | Eio.Exn.Multiple
+      [ (Finish_resolver, _); (Unix.Unix_error (Unix.ENOENT, "unlink", s), _) ]
+    when String.equal s default_resolver_addr ->
+      Option.get !res

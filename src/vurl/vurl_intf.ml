@@ -24,10 +24,10 @@ let cid_of_string_exn s =
   | Error (`Unsupported c) ->
       failwith ("Unsupported multibase in cid " ^ Multibase.Encoding.to_string c)
 
-let to_string t =
+let to_string ?minify t =
   match t.segments with
   | [] -> Uri.to_string t.intentional_uri
-  | _ -> to_json t |> Ezjsonm.value_to_string
+  | _ -> to_json t |> Ezjsonm.value_to_string ?minify
 
 let segment_of_json_exn segment =
   match
@@ -73,7 +73,7 @@ let next_uri t =
   match decapsulate t with `Segment (s, _) -> s.uri | `URI uri -> uri
 
 let encapsulate t cid uri = { t with segments = { cid; uri } :: t.segments }
-let pp ppf f = Format.fprintf ppf "%s" (to_string f)
+let pp ppf f = Format.fprintf ppf "%s" (to_string ~minify:false f)
 let of_uri uri = { intentional_uri = Uri.of_string uri; segments = [] }
 let resolvers : Rpc.Client.Resolver.t Capability.t list ref = ref []
 let add_resolver c = resolvers := c :: !resolvers

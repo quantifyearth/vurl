@@ -4,7 +4,7 @@ type t
 val pp : Format.formatter -> t -> unit
 (** A pretty printer for Vurls. *)
 
-val to_string : t -> string
+val to_string : ?minify:bool -> t -> string
 (** Serialises a Vurl to their canonical format *)
 
 val of_string_exn : string -> t

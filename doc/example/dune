@@ -1,24 +1,13 @@
 (executable
- (name srtm)
- (modules srtm)
- (libraries eio_main vurl-eio mirage-crypto-rng-eio progress))
-
-(executable
- (name doi)
- (modules doi)
- (libraries eio_main vurl-eio mirage-crypto-rng-eio progress))
-
-(executable
- (name git)
- (modules git)
- (libraries eio_main git vurl-eio mirage-crypto-rng-eio progress))
-
-(executable
- (name example)
- (modules example)
- (libraries eio_main vurl-eio mirage-crypto-rng-eio progress))
-
-(executable
- (name resolver)
- (modules resolver)
- (libraries eio_main vurl-eio mirage-crypto-rng-eio progress))
+ (name vurl_example)
+ (package vurl-eio)
+ (public_name vurl-examples)
+ (libraries
+  eio_main
+  cmdliner
+  fmt.cli
+  logs.cli
+  fmt.tty
+  vurl-eio
+  mirage-crypto-rng-eio
+  progress))
