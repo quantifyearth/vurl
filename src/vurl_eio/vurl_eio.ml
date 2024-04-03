@@ -16,7 +16,7 @@ module File = struct
         let progress_bar = p length in
         Progress.with_reporter progress_bar
 
-  let take_all_and_report report t =
+  let _take_all_and_report report t =
     try
       while true do
         let old = Buf_read.buffered_bytes t in
@@ -32,14 +32,10 @@ module File = struct
   let resolve ?progress http t uri =
     Client.get http uri @@ fun parts length _response body ->
     with_progress_bar (Option.map (fun v -> (t.name uri, v)) length) progress
-    @@ fun progress ->
+    @@ fun _progress ->
     let file = Path.(t.directory / t.name uri) in
     Path.with_open_out ~create:(`If_missing 0o644) file @@ fun oc ->
-    Buf_write.with_flow oc @@ fun w ->
-    let buf_r = Buf_read.of_flow ~max_size:max_int body in
-    progress (Buf_read.buffered_bytes buf_r);
-    let buf = take_all_and_report progress buf_r in
-    Buf_write.string w buf;
+    Flow.copy_string body oc;
     (parts, t)
 end
 
@@ -135,9 +131,16 @@ let file_resolver ?(name = name) ?progress (net : _ Net.t) (dir : _ Path.t) :
   let parts, _resolve = File.resolve ?progress http directory uri in
   let cid = cid_of_file Path.(dir / filename) in
   let vurl =
-    List.fold_left
-      (fun v (uri, cid) -> Vurl.encapsulate v cid uri)
-      req.vurl parts
+    match Vurl.decapsulate req.vurl with
+    | `Segment (_, prev_vurl) ->
+        List.fold_left
+          (fun acc (uri, cid) -> Vurl.encapsulate acc cid uri)
+          prev_vurl parts
+    | `URI uri ->
+        List.fold_left
+          (fun acc (uri, cid) -> Vurl.encapsulate acc cid uri)
+          (Vurl.of_uri (Uri.to_string uri))
+          parts
   in
   let vurl =
     Vurl.encapsulate vurl cid
@@ -274,6 +277,6 @@ let with_default ~net path fn =
   | Finish_resolver -> Option.get !res
   (* TODO: Weird race condition with some unlinking *)
   | Eio.Exn.Multiple
-      [ (Finish_resolver, _); (Unix.Unix_error (Unix.ENOENT, "unlink", s), _) ]
-    when String.equal s default_resolver_addr ->
+      [ (Finish_resolver, _); (Unix.Unix_error (Unix.ENOENT, "unlink", _s), _) ]
+  (* when String.equal s default_resolver_addr -> *) ->
       Option.get !res

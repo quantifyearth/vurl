@@ -15,15 +15,15 @@ Vurls are an attempt to add versioning to URI resolution. For example, what shou
   "segments": [
     {
       "uri": "file:./_data/document-6498375",
-      "cid": "bag5qgera4k6fjhqzfv5ey4kgwmymrntwup4pysm23khvgmadwkgv5cwrtq3q"
+      "cid": "bag5qgeraipjyvov4axsmb4pktfhmleqi4oc2lno5if6f6wjyq37w4ktncvxq"
+    },
+    {
+      "uri": "https://ieeexplore.ieee.org/document/6498375/",
+      "cid": "bag5qgeraipjyvov4axsmb4pktfhmleqi4oc2lno5if6f6wjyq37w4ktncvxq"
     },
     {
       "uri": "http://ieeexplore.ieee.org/document/6498375/",
       "cid": "bag5qgerap5iaobunfnlovfzv4jeq2ygp6ltszlrreaskyh3mseky5osh2boq"
-    },
-    {
-      "uri": "http://ieeexplore.ieee.org/document/6498375/",
-      "cid": "bag5qgeratl2hddmmes3ooewxrpyquhutmd2jinw5n3lny6x6sbth6esmrg7q"
     }
   ]
 }

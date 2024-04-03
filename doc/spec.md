@@ -43,7 +43,7 @@ And we can inspect the vurl to see the resolutions.
 ```ocaml
 # Vurl.to_string vurl;;
 - : string =
-"{\"intentional_uri\":\"https://example.com/index.html\",\"segments\":[{\"uri\":\"file:./_data/index.html\",\"cid\":\"bag5qgera5kh2y7df7nmjwdktkyhveupxj6pjwjbupdolnm7kpg26gzcjzdmq\"}]}"
+"{\"intentional_uri\":\"https://example.com/index.html\",\"segments\":[{\"uri\":\"file:./_data/index.html\",\"cid\":\"bag5qgera5kh2y7df7nmjwdktkyhveupxj6pjwjbupdolnm7kpg26gzcjzdmq\"},{\"uri\":\"https://example.com/index.html\",\"cid\":\"bag5qgera5kh2y7df7nmjwdktkyhveupxj6pjwjbupdolnm7kpg26gzcjzdmq\"}]}"
 ```
 
 In this case we went straight from the intentional URI to a downloaded
