@@ -1,6 +1,6 @@
 ## Vurl
 
-Vurls are an attempt to add versioning to URI resolution. For example, what should happen when we request `https://doi.org/10.1145/2541883.2541895`?
+Vurls are an attempt to add versioning to URI resolution. For example, what should happen when we request `https://doi.org/10.1109/SASOW.2012.14`?
 
 <!-- $MDX non-deterministic=command -->
 ```ocaml
