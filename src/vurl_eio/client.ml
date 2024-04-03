@@ -39,7 +39,9 @@ let get http uri fn =
         loop ?headers ((uri, Vurl.cid (Cstruct.of_string s)) :: acc) new_uri
     | `OK ->
         let length = Http.Response.content_length response in
-        fn acc length response body
+        let s = Flow.read_all body in
+        let parts = List.rev ((uri, Vurl.cid (Cstruct.of_string s)) :: acc) in
+        fn parts length response s
     | `Moved_permanently -> (
         match Http.Response.headers response |> Http.Header.get_location with
         | None -> Fmt.failwith "Move permanently with no location!"
