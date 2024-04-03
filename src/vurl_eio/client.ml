@@ -20,7 +20,7 @@ let get http uri fn =
             (fun c -> ("Cookie", Cookie.name c ^ "=" ^ Cookie.value c))
             set_cookies
         in
-        let s = Buf_read.take_all (Buf_read.of_flow ~max_size:max_int body) in
+        let s = Flow.read_all body in
         let new_uri =
           Http.Header.get response.headers "location"
           |> Option.get |> Uri.of_string
@@ -40,6 +40,13 @@ let get http uri fn =
     | `OK ->
         let length = Http.Response.content_length response in
         fn acc length response body
-    | _ -> failwith ""
+    | `Moved_permanently -> (
+        match Http.Response.headers response |> Http.Header.get_location with
+        | None -> Fmt.failwith "Move permanently with no location!"
+        | Some location ->
+            let new_uri = Uri.of_string location in
+            let s = Flow.read_all body in
+            loop ((uri, Vurl.cid (Cstruct.of_string s)) :: acc) new_uri)
+    | e -> Fmt.failwith "GET: %a" Http.Status.pp e
   in
   loop [] uri

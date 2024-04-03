@@ -1,5 +1,6 @@
 (mdx
- (libraries vurl eio eio_main eio.unix vurl_eio))
+ (deps %{bin:vurl-examples})
+ (libraries vurl eio eio_main fmt eio.unix vurl_eio))
 
 (subdir
  doc
